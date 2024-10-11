@@ -1,0 +1,3 @@
+C:\Users\edipo\source\repos\OpenGLProject\x64\Debug\OpenGLProject.exe
+C:\Users\edipo\source\repos\OpenGLProject\x64\Debug\OpenGLProject.vcxproj.CopyComplete
+C:\Users\edipo\source\repos\OpenGLProject\x64\Debug\freeglutd.dll

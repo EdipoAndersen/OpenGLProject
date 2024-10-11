@@ -1,0 +1,7 @@
+﻿  main.cpp
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared\minwindef.h(130,1): warning C4005: 'APIENTRY': macro redefinition
+C:\Users\edipo\vcpkg\installed\x64-windows\include\glad\glad.h(32,1): message : see previous definition of 'APIENTRY'
+C:\Users\edipo\source\repos\OpenGLProject\main.cpp(64,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+  OpenGLProject.vcxproj -> C:\Users\edipo\source\repos\OpenGLProject\x64\Debug\OpenGLProject.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.
