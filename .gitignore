@@ -32,3 +32,4 @@
 *.obj
 *.log
 *.log
+/x64/Debug
