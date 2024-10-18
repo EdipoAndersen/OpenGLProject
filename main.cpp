@@ -1,164 +1,122 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-#include <string>
-#include <sstream>
-#include <GL/glut.h>
-#include "Player.h"
-#include "Collectible.h"
-#include "ParticleSystem.h"
-#include "Enemy.h"
+#include "ShaderProgram.h"
 
-const unsigned int WINDOW_WIDTH = 800;
-const unsigned int WINDOW_HEIGHT = 600;
-const float FLOOR_Y = 100.0f;
+// Cube vertices and colors
+float vertices[] = {
+    // Positions           // Colors
+    -0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,  // Red
+     0.5f, -0.5f, -0.5f,   0.0f, 1.0f, 0.0f,  // Green
+     0.5f,  0.5f, -0.5f,   0.0f, 0.0f, 1.0f,  // Blue
+    -0.5f,  0.5f, -0.5f,   1.0f, 1.0f, 0.0f,  // Yellow
 
-void processInput(GLFWwindow* window, Player& player);
-void setupProjection();
-void renderFloor(float floorY);
-void checkCollisions(Player& player, Collectible collectibles[], int collectibleCount, int& score, ParticleSystem& particleSystem, Enemy& enemy, int& lives);
-void renderText(std::string text, float x, float y);
+    -0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 1.0f,  // Magenta
+     0.5f, -0.5f,  0.5f,   0.0f, 1.0f, 1.0f,  // Cyan
+     0.5f,  0.5f,  0.5f,   1.0f, 1.0f, 1.0f,  // White
+    -0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 0.0f   // Black
+};
 
-int main(int argc, char** argv) {
-    glutInit(&argc, argv);
+// Cube indices for element buffer
+unsigned int indices[] = {
+    0, 1, 2, 2, 3, 0,  // Back face
+    4, 5, 6, 6, 7, 4,  // Front face
+    0, 4, 7, 7, 3, 0,  // Left face
+    1, 5, 6, 6, 2, 1,  // Right face
+    3, 7, 6, 6, 2, 3,  // Top face
+    0, 1, 5, 5, 4, 0   // Bottom face
+};
 
+int main() {
+    // Initialize GLFW and OpenGL
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
     }
 
-    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "2D Platformer", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Colored Cube", NULL, NULL);
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
-
     glfwMakeContextCurrent(window);
-
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    setupProjection();
+    // Enable depth testing for 3D rendering
+    glEnable(GL_DEPTH_TEST);
 
-    Player player(100.0f, FLOOR_Y + 50.0f);
-    Collectible collectibles[3] = {
-        Collectible(200.0f, FLOOR_Y + 50.0f),
-        Collectible(400.0f, FLOOR_Y + 50.0f),
-        Collectible(600.0f, FLOOR_Y + 50.0f)
-    };
+    // Create and compile shaders
+    ShaderProgram shader("vertex_shader.glsl", "fragment_shader.glsl");
+    shader.use();
 
-    // Inimigo que se move de um lado para o outro
-    Enemy enemy(500.0f, FLOOR_Y + 10.0f, 100.0f);  // Velocidade de 100.0f
+    // Set up vertex buffer object (VBO), vertex array object (VAO), and element buffer object (EBO)
+    unsigned int VBO, VAO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
 
-    int score = 0;
-    int lives = 3;  // O jogador começa com 3 vidas
-    ParticleSystem particleSystem;
+    glBindVertexArray(VAO);
 
-    float lastFrame = 0.0f;
+    // Bind VBO, EBO, and buffer data
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    // Vertex position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Vertex color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    // View and Projection matrices for transforming the cube
+    glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));  // Move the camera back
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+
+    // Pass the matrices to the shader
+    shader.setUniform("view", view);
+    shader.setUniform("projection", projection);
+
+    // Main render loop
     while (!glfwWindowShouldClose(window)) {
-        float currentFrame = glfwGetTime();
-        float deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+        // Process input
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, true);
 
-        processInput(window, player);
+        // Clear the screen
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        player.applyGravity(deltaTime);
-        player.move(deltaTime, FLOOR_Y);
+        // Update the model matrix to rotate the cube over time
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));  // Rotate the cube over time
 
-        enemy.update(deltaTime, 200.0f, 600.0f);  // O inimigo se move entre x = 200 e x = 600
+        // Pass the updated model matrix to the shader
+        shader.setUniform("model", model);
 
-        checkCollisions(player, collectibles, 3, score, particleSystem, enemy, lives);
+        // Render the cube
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        renderFloor(FLOOR_Y);
-        player.render();
-
-        for (int i = 0; i < 3; ++i) {
-            collectibles[i].render();
-        }
-
-        enemy.render();
-
-        particleSystem.update(deltaTime);
-        particleSystem.render();
-
-        // Exibir vidas e score na tela
-        std::stringstream ssLives;
-        ssLives << "Lives: " << lives;
-        renderText(ssLives.str(), 10.0f, WINDOW_HEIGHT - 40.0f);  // Vidas acima do score
-
-        std::stringstream ssScore;
-        ssScore << "Score: " << score;
-        renderText(ssScore.str(), 10.0f, WINDOW_HEIGHT - 60.0f);  // Score
-
+        // Swap buffers and poll events
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    // Clean up
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
+
     glfwTerminate();
     return 0;
-}
-
-void processInput(GLFWwindow* window, Player& player) {
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-        player.velocityX = -200.0f;
-    }
-    else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-        player.velocityX = 200.0f;
-    }
-    else {
-        player.velocityX = 0.0f;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && player.isGrounded(FLOOR_Y)) {
-        player.velocityY = 300.0f;
-    }
-}
-
-void setupProjection() {
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0f, WINDOW_WIDTH, 0.0f, WINDOW_HEIGHT, -1.0f, 1.0f);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-}
-
-void renderFloor(float floorY) {
-    glBegin(GL_QUADS);
-    glColor3f(0.5f, 0.5f, 0.5f);
-    glVertex2f(0.0f, floorY);
-    glVertex2f(WINDOW_WIDTH, floorY);
-    glVertex2f(WINDOW_WIDTH, floorY + 10.0f);
-    glVertex2f(0.0f, floorY + 10.0f);
-    glEnd();
-}
-
-void checkCollisions(Player& player, Collectible collectibles[], int collectibleCount, int& score, ParticleSystem& particleSystem, Enemy& enemy, int& lives) {
-    for (int i = 0; i < collectibleCount; ++i) {
-        if (collectibles[i].checkCollision(player.x, player.y, player.width, player.height)) {
-            score += 1;
-            particleSystem.generate(collectibles[i].x, collectibles[i].y, 10);
-        }
-    }
-
-    // Verifica colisão com o inimigo
-    if (enemy.checkCollision(player.x, player.y, player.width, player.height)) {
-        if (lives > 0) {
-            lives -= 1;  // O jogador perde 1 vida
-        }
-    }
-}
-
-void renderText(std::string text, float x, float y) {
-    glRasterPos2f(x, y);
-    for (char c : text) {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
-    }
 }

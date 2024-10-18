@@ -6,26 +6,23 @@ Enemy::Enemy(float startX, float startY, float velX)
 
 void Enemy::update(float deltaTime, float minX, float maxX) {
     x += velocityX * deltaTime;
-
-    // Se o inimigo atingir as bordas, inverta a direção
     if (x < minX || x + width > maxX) {
         velocityX = -velocityX;
     }
 }
 
 void Enemy::render() {
-    // Renderiza o inimigo como um quadrado laranja
     glBegin(GL_QUADS);
-    glColor3f(1.0f, 0.5f, 0.0f);  // Cor laranja
-    glVertex2f(x, y);
-    glVertex2f(x + width, y);
-    glVertex2f(x + width, y + height);
-    glVertex2f(x, y + height);
+    glNormal3f(0.0f, 0.0f, 1.0f);
+    glColor3f(1.0f, 0.5f, 0.0f);
+    glVertex3f(x, y, 0.0f);
+    glVertex3f(x + width, y, 0.0f);
+    glVertex3f(x + width, y + height, 0.0f);
+    glVertex3f(x, y + height, 0.0f);
     glEnd();
 }
 
 bool Enemy::checkCollision(float playerX, float playerY, float playerWidth, float playerHeight) {
-    // Colisão simples AABB (Axis-Aligned Bounding Box)
     return (playerX < x + width && playerX + playerWidth > x &&
         playerY < y + height && playerY + playerHeight > y);
 }

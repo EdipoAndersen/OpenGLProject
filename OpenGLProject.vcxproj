@@ -140,6 +140,8 @@ opengl32.lib;User32.lib;Gdi32.lib;Shell32.lib;%(AdditionalDependencies)</Additio
     <ClCompile Include="particle.cpp" />
     <ClCompile Include="particleSystem.cpp" />
     <ClCompile Include="player.cpp" />
+    <ClCompile Include="renderUtils.cpp" />
+    <ClCompile Include="shaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="collectible.h" />
@@ -147,6 +149,8 @@ opengl32.lib;User32.lib;Gdi32.lib;Shell32.lib;%(AdditionalDependencies)</Additio
     <ClInclude Include="particle.h" />
     <ClInclude Include="particlesystem.h" />
     <ClInclude Include="player.h" />
+    <ClInclude Include="renderUtils.h" />
+    <ClInclude Include="shaderProgram.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="fragment_shader.glsl" />

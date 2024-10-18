@@ -7,12 +7,11 @@ public:
     float width, height;
     float velocityX, velocityY;
 
-    Player(float startX, float startY);
-
-    void move(float deltaTime, float floorY);
+    Player(float x, float y);
     void applyGravity(float deltaTime);
+    void move(float deltaTime, float floorY);
+    bool isGrounded(float floorY);
     void render();
-    bool isGrounded(float floorY);  // Now takes the floor's Y position into account
 };
 
 #endif
