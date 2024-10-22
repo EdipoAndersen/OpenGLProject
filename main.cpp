@@ -6,6 +6,49 @@
 #include <iostream>
 #include "ShaderProgram.h"
 
+// Globais para controlar a posição e a velocidade do cubo
+glm::vec3 cubePosition = glm::vec3(0.0f, 0.0f, 0.0f);  // Posição do cubo
+float cubeSpeed = 2.5f;  // Velocidade de movimento do cubo
+float cubeVelocityY = 0.0f;  // Velocidade no eixo Y
+float gravity = -9.8f;  // Força da gravidade
+bool isJumping = false;  // Verifica se o cubo está no ar
+
+// Função para processar entrada do teclado
+void processInput(GLFWwindow* window, float deltaTime) {
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        cubePosition.z -= cubeSpeed * deltaTime;  // Move para frente
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        cubePosition.z += cubeSpeed * deltaTime;  // Move para trás
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        cubePosition.x -= cubeSpeed * deltaTime;  // Move para esquerda
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        cubePosition.x += cubeSpeed * deltaTime;  // Move para direita
+    }
+
+    // Pulo
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !isJumping) {
+        cubeVelocityY = 5.0f;  // Definir a força do pulo
+        isJumping = true;
+    }
+}
+
+// Função para aplicar gravidade no cubo
+void applyGravity(float deltaTime) {
+    cubeVelocityY += gravity * deltaTime;
+    cubePosition.y += cubeVelocityY * deltaTime;
+
+    // Impedir que o cubo atravesse o chão
+    float cubeBottomY = cubePosition.y - 0.5f;  // A parte inferior do cubo
+    if (cubeBottomY < -0.5f) {  // Ajuste para o chão estar em -0.5 em vez de -1.0
+        cubePosition.y = 0.0f;  // Ajustar a posição do cubo de forma que sua base fique sobre o chão
+        cubeVelocityY = 0.0f;  // Zerar a velocidade quando atingir o chão
+        isJumping = false;  // Permitir que o jogador pule novamente
+    }
+}
+
 // Vértices do cubo e suas cores
 float vertices[] = {
     // Posições           // Cores
@@ -30,10 +73,10 @@ unsigned int indices[] = {
     0, 1, 5, 5, 4, 0   // Face de baixo
 };
 
-// Vértices do chão (chão agora posicionado um pouco mais abaixo)
+// Vértices do chão
 float floorVertices[] = {
     // Posições           // Cores
-    -5.0f,  -1.0f, -5.0f,  0.5f, 0.5f, 0.5f,  // Cinza
+    -5.0f,  -1.0f, -5.0f,  1.5f, 0.5f, 1.5f,  // Cinza
      5.0f,  -1.0f, -5.0f,  0.5f, 0.5f, 0.5f,
      5.0f,  -1.0f,  5.0f,  0.5f, 0.5f, 0.5f,
     -5.0f,  -1.0f,  5.0f,  0.5f, 0.5f, 0.5f
@@ -52,7 +95,7 @@ int main() {
         return -1;
     }
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Cubo Colorido", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Cubo com Gravidade e Camera", NULL, NULL);
     if (!window) {
         std::cerr << "Falha ao criar janela GLFW" << std::endl;
         glfwTerminate();
@@ -64,7 +107,7 @@ int main() {
         return -1;
     }
 
-    // Habilitar teste de profundidade para renderização 3D
+    // Habilitar teste de profundidade
     glEnable(GL_DEPTH_TEST);
 
     // Criar e compilar shaders
@@ -115,25 +158,34 @@ int main() {
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    // Matrizes de visualização e projeção para transformar o cubo e o chão
-    glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -8.0f));  // Mover a câmera mais para trás
+    // Projeção e configuração da câmera
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
 
-    // Passar as matrizes de visualização e projeção para o shader
-    shader.setUniform("view", view);
-    shader.setUniform("projection", projection);
+    float lastFrame = 0.0f;
 
     // Loop principal de renderização
     while (!glfwWindowShouldClose(window)) {
-        // Processar input
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, true);
+        // Calcular o tempo desde o último quadro
+        float currentFrame = glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
+        // Processar entrada de teclado
+        processInput(window, deltaTime);
+        applyGravity(deltaTime);  // Aplicar a gravidade ao cubo
 
         // Limpar a tela
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Atualizar a matriz de modelo para o cubo girar
+        // Atualizar a matriz de visualização para seguir o cubo
+        glm::vec3 cameraPosition = cubePosition + glm::vec3(0.0f, 2.0f, 8.0f);  // Ajustar a posição da câmera
+        glm::mat4 view = glm::lookAt(cameraPosition, cubePosition, glm::vec3(0.0f, 1.0f, 0.0f));
+        shader.setUniform("view", view);
+        shader.setUniform("projection", projection);
+
+        // Atualizar a matriz de modelo para o cubo girar e se mover
         glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, cubePosition);  // Aplicar a posição do cubo
         model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));  // Rotação do cubo
 
         // Passar a matriz de modelo para o shader do cubo
